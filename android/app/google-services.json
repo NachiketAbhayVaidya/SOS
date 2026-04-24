@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "298209614585",
+    "project_id": "sos-women-a1f21",
+    "storage_bucket": "sos-women-a1f21.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:298209614585:android:7163f51bff4fdeae072028",
+        "android_client_info": {
+          "package_name": "com.example.shreyas"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBumZuHja5ccV0-5Y56c5Wxk_x2UrCFUX0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:298209614585:android:01644974413b9bb9072028",
+        "android_client_info": {
+          "package_name": "com.example.sosapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBumZuHja5ccV0-5Y56c5Wxk_x2UrCFUX0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
