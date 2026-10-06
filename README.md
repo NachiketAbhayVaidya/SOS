@@ -8,9 +8,9 @@ A cross-platform women's safety app built with **Flutter** and **Firebase**. Wit
 
 ## Screenshots
 
-| Home | SOS active | SOS cancelled |
-|:---:|:---:|:---:|
-| <img src="docs/screenshots/home.jpg" width="240"> | <img src="docs/screenshots/sos-active.jpg" width="240"> | <img src="docs/screenshots/sos-cancelled.jpg" width="240"> |
+| Home | SOS active | SOS cancelled | Nearby alerts |
+|:---:|:---:|:---:|:---:|
+| <img src="docs/screenshots/home.jpg" width="200"> | <img src="docs/screenshots/sos-active.jpg" width="200"> | <img src="docs/screenshots/sos-cancelled.jpg" width="200"> | <img src="docs/screenshots/nearby-alerts.jpg" width="200"> |
 
 ## Features
 
@@ -30,6 +30,16 @@ A cross-platform women's safety app built with **Flutter** and **Firebase**. Wit
   - recent alerts nearby (40%)
 - **My Location**: open your current position in Google Maps.
 - First-run setup flow, splash screen and runtime permission handling.
+
+## Testing the Nearby Alerts feature
+
+Nearby Alerts needs two devices, so test it on **two Android phones**:
+
+1. Install the APK on both phones and allow location and notification permissions.
+2. Keep the phones close to each other.
+3. On phone A, press and hold **SOS**.
+4. On phone B, you should get a push notification, and the alert appears under **Nearby Alerts** (the page auto-refreshes every 10 seconds).
+5. Cancel the SOS on phone A. The alert should disappear from phone B.
 
 ## Tech stack
 
