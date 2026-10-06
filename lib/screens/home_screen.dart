@@ -8,6 +8,8 @@ import '../models/models.dart';
 import '../services/sos_service.dart';
 import 'contacts_screen.dart';
 import 'nearby_alerts_screen.dart';
+import '../services/safety_score_service.dart';
+import 'package:sosapp/safety_score_widget.dart';
 import '../services/notification_service.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -16,6 +18,7 @@ class HomeScreen extends StatefulWidget {
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
+
 
 class _HomeScreenState extends State<HomeScreen>
     with SingleTickerProviderStateMixin {
@@ -30,6 +33,8 @@ class _HomeScreenState extends State<HomeScreen>
   StreamSubscription? _alertSubscription;
   late AnimationController _pulseController;
   late Animation<double> _pulseAnim;
+  SafetyResult? _safetyResult;
+  Timer? _safetyTimer;
 
   @override
   void initState() {
@@ -43,6 +48,39 @@ class _HomeScreenState extends State<HomeScreen>
     _startLocationUpdates();
     _requestPermissions();
     _setupFCMListeners();
+    _safetyTimer = Timer.periodic(const Duration(minutes: 5), (_) => _updateSafetyScore());
+  }
+
+  void _startLocationUpdates() {
+    _locationTimer = Timer.periodic(const Duration(seconds: 10), (_) async {
+      final pos = await SOSService.getCurrentLocation();
+      if (pos != null && mounted) {
+        setState(() => _currentPosition = pos);
+        _updateSafetyScore(); // ← must be here
+      }
+    });
+
+    // Also call immediately on startup
+    SOSService.getCurrentLocation().then((pos) {
+      if (pos != null && mounted) {
+        setState(() => _currentPosition = pos);
+        _updateSafetyScore(); // ← and here
+      }
+    });
+  }
+
+  Future<void> _updateSafetyScore() async {
+    print('🔍 Updating safety score... position: $_currentPosition');
+    if (_currentPosition == null) {
+      print('❌ Position is null, cannot calculate score');
+      return;
+    }
+    final result = await SafetyScoreService.calculateSafetyScore(
+      latitude: _currentPosition!.latitude,
+      longitude: _currentPosition!.longitude,
+    );
+    print('✅ Safety score calculated: ${result.score}');
+    if (mounted) setState(() => _safetyResult = result);
   }
 
   Future<void> _requestPermissions() async {
@@ -59,15 +97,7 @@ class _HomeScreenState extends State<HomeScreen>
     _startNearbyCheck();
   }
 
-  void _startLocationUpdates() {
-    _locationTimer = Timer.periodic(const Duration(seconds: 10), (_) async {
-      final pos = await SOSService.getCurrentLocation();
-      if (pos != null && mounted) setState(() => _currentPosition = pos);
-    });
-    SOSService.getCurrentLocation().then((pos) {
-      if (pos != null && mounted) setState(() => _currentPosition = pos);
-    });
-  }
+
 
   void _startNearbyCheck() {
     _alertSubscription = SOSService.alertsStream().listen((alerts) {
@@ -233,7 +263,132 @@ class _HomeScreenState extends State<HomeScreen>
     _pulseController.dispose();
     _locationTimer?.cancel();
     _alertSubscription?.cancel();
+    _safetyTimer?.cancel();
     super.dispose();
+  }
+
+  void _showSafetyDetails() {
+    if (_safetyResult == null) return;
+    final result = _safetyResult!;
+    final color = Color(result.colorValue);
+
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24))),
+      builder: (_) => Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40, height: 4,
+                decoration: BoxDecoration(
+                    color: Colors.grey[300],
+                    borderRadius: BorderRadius.circular(2)),
+              ),
+            ),
+            const SizedBox(height: 20),
+            Row(
+              children: [
+                Icon(Icons.shield, color: color, size: 28),
+                const SizedBox(width: 10),
+                Text('Safety Analysis',
+                    style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                        color: color)),
+              ],
+            ),
+            const SizedBox(height: 6),
+            Text(
+              'Score updates every 5 minutes based on your location and time.',
+              style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+            ),
+            const SizedBox(height: 20),
+            _detailRow(Icons.access_time, 'Time of day',
+                result.timeLabel, result.timeScore, color),
+            const Divider(height: 24),
+            _detailRow(Icons.location_on, 'Location type',
+                result.locationLabel, result.locationScore, color),
+            const Divider(height: 24),
+            _detailRow(Icons.warning_amber, 'Area SOS history',
+                result.alertLabel, result.alertScore, color),
+            const SizedBox(height: 20),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: color.withValues(alpha: 0.08),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: color.withValues(alpha: 0.2)),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.info_outline, color: color, size: 18),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      result.score >= 75
+                          ? 'You are in a relatively safe zone. Stay alert!'
+                          : result.score >= 50
+                          ? 'Exercise caution. Share your location with someone you trust.'
+                          : 'High risk area or time. Consider moving to a safer location or call 1091.',
+                      style: TextStyle(fontSize: 12, color: color),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _detailRow(IconData icon, String title, String subtitle, int score, Color color) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Icon(icon, color: color, size: 18),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(title,
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 13)),
+              Text(subtitle,
+                  style: const TextStyle(color: Colors.grey, fontSize: 12)),
+            ],
+          ),
+        ),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+          decoration: BoxDecoration(
+            color: color.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: Text(
+            '$score',
+            style: TextStyle(
+                color: color,
+                fontWeight: FontWeight.bold,
+                fontSize: 14),
+          ),
+        ),
+      ],
+    );
   }
 
   @override
@@ -299,6 +454,14 @@ class _HomeScreenState extends State<HomeScreen>
                 padding: const EdgeInsets.all(24),
                 child: Column(
                   children: [
+                    // Safety Score Widget
+                    if (_safetyResult != null) ...[
+                      const SizedBox(height: 16),
+                      SafetyScoreWidget(
+                        result: _safetyResult!,
+                        onTap: () => _showSafetyDetails(),
+                      ),
+                    ],
                     const SizedBox(height: 20),
                     if (_currentPosition != null)
                       Container(
